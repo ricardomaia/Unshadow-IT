@@ -1,0 +1,30 @@
+id: workflow-template-step1
+
+info:
+  name: value-sharing-template1
+  author: ricardomaia
+  severity: info
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/workflow-step1.php"
+    redirects: true
+    matchers-condition: and
+    matchers:
+      - type: word
+        condition: or
+        words:
+          - "Workflow" # case sensitive
+          - "non-existent word"
+      - type: regex
+        regex:
+          - "(?i)step"
+
+    extractors:
+      - type: regex
+        name: flag
+        part: body
+        group: 1
+        regex:
+          - '(?i)flag:\W.*<pre>(.*)</pre>'

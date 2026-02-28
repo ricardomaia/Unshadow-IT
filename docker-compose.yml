@@ -1,0 +1,93 @@
+services:
+  # ── Web Vulnerabilities (HTTP) ────────────────────────────────────────────────
+
+  tomcat-cve:
+    image: vulhub/tomcat:8.5.19
+    container_name: tomcat-cve
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8990:8080"
+
+  struts2-s2-045:
+    image: piesecurity/apache-struts2-cve-2017-5638:latest
+    container_name: struts2-s2-045
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8088:8080"
+
+  spring-webmvc:
+    image: vulhub/spring-webmvc:5.3.17
+    container_name: spring-webmvc
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8089:8080"
+
+  # ── CVE-2025-32463: Sudo chroot Privilege Escalation ─────────────────────────
+
+  # Vulnerable container – sudo 1.9.14 (affected version)
+  vulnerable-sudo:
+    build:
+      context: ./CVE-2025-32463/vulnerable
+    container_name: vulnerable-sudo-target
+    hostname: vulnerable
+    volumes:
+      - ./CVE-2025-32463/cve-2025-32463.yaml:/tmp/template.yaml
+      - ./CVE-2025-32463/output.txt:/tmp/nuclei-output.txt
+      - ./CVE-2025-32463/exploit.sh:/tmp/exploit.sh
+      # Mount Nuclei signing keys from Windows host
+      - ${APPDATA}/nuclei/keys:/root/.config/nuclei/keys:ro
+      - ${APPDATA}/nuclei/keys:/home/testuser/.config/nuclei/keys:ro
+    tty: true
+    stdin_open: true
+
+  # Patched container – sudo >= 1.9.17p1 (fixed version)
+  patched-sudo:
+    build:
+      context: ./CVE-2025-32463/patched
+    container_name: patched-sudo-target
+    hostname: patched
+    volumes:
+      - ./CVE-2025-32463/cve-2025-32463.yaml:/tmp/template.yaml
+      - ./CVE-2025-32463/output.txt:/tmp/nuclei-output.txt
+      - ./CVE-2025-32463/exploit.sh:/tmp/exploit.sh
+      # Mount Nuclei signing keys from Windows host
+      - ${APPDATA}/nuclei/keys:/root/.config/nuclei/keys:ro
+      - ${APPDATA}/nuclei/keys:/home/testuser/.config/nuclei/keys:ro
+    tty: true
+    stdin_open: true
+
+  # ── my-nuclei-templates: Targets for Nuclei template testing ─────────────────
+
+  nuclei-target:
+    image: php:7.2-apache
+    container_name: nuclei-target
+    restart: always
+    stdin_open: true
+    tty: true
+    ports:
+      - "1337:80"
+    volumes:
+      - ./php:/var/www/html
+    working_dir: /container
+
+  mailcatcher:
+    image: sj26/mailcatcher
+    container_name: mailcatcher
+    ports:
+      - "1025:1025"
+      - "1080:1080"
+
+  endlessh:
+    image: lscr.io/linuxserver/endlessh:latest
+    container_name: endlessh
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+      - MSDELAY=10000
+      - MAXLINES=32
+      - MAXCLIENTS=4096
+      - LOGFILE=false
+    ports:
+      - "22:2222"

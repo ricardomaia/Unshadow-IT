@@ -1,0 +1,36 @@
+id: network_template
+
+info:
+  name: Network Template
+  description: Network Template for RAW communication.
+  author: ricardomaia
+  severity: info
+
+tcp:
+  - inputs:
+      - data: "HELO hostname\r\n"
+        read: 1024
+      - data: "mail from:sender@example.com\r\n"
+        read: 1024
+      - data: "rcpt to:recipient@example.com\r\n"
+        read: 1024
+      - data: "data\r\n"
+        read: 1024
+      - data: "From: sender@example.com\r\nTo: recipient@example.com\r\nSubject: This is from me. Message ID: {{rand_text_numeric(10)}}\r\nMime-Version: 1.0\r\nContent-Type: text/html; charset=\"ISO-8859-1\";\r\nContent-Transfer-Encoding: 7bit;\r\n\r\n<html><head><title>HTML e-mail</title></head><body><h1>This is <b>HTML</b></h1></body></html>\r\n.\r\n"
+        read: 1024
+      - data: "QUIT\r\n"
+    host:
+      - "{{Hostname}}"
+    read-size: 1024
+    matchers:
+      - type: regex
+        part: raw
+        regex:
+          - "(?i)250.(Message|Mail).accepted"
+    extractors:
+      - type: regex
+        part: raw
+        name: response
+        group: 1
+        regex:
+          - "(.*)"

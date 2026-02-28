@@ -1,0 +1,44 @@
+id: pii-extractor
+
+info:
+  name: PII Extractor
+  author: ricardomaia
+  severity: info
+  tags: misc,email
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+
+    extractors:
+      - type: regex
+        name: cc_visa
+        regex:
+          - "4[0-9]{15}" # Visa
+
+      - type: regex
+        name: cpf
+        regex:
+          - '\d{3}\.\d{3}\.\d{3}\-\d{2}' # CPF
+          - '\d{3}\d{3}\d{3}\-\d{2}' # CPF
+          - '\b\d{11}\b' # CPF
+
+      - type: regex
+        name: email
+        part: body
+        regex:
+          - '(?i)[a-z0-9._%+\-"”]+@[a-z0-9.\-]+\.[a-z]{2,}'
+
+      - type: regex
+        name: cnpj
+        part: body
+        regex:
+          - '\b(\d{2}\.?\d{3}\.?\d{3}\/?\d{4}\-?\d{2})\b'
+
+      - type: regex
+        name: telefone
+        part: body
+        group: 1
+        regex:
+          - '\s?((\+?\d{1,2}\s?)?\(?\d{1,2}\)?\s?\d{4,5}-\d{4})'

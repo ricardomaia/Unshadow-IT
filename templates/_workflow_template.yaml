@@ -1,0 +1,11 @@
+id: workflow-template
+
+info:
+  name: Workflow Template
+  author: ricardomaia
+  description: Step by Step
+
+workflows:
+  - template: templates/_workflow_template_step1.yaml
+    subtemplates:
+      - template: templates/_workflow_template_step2.yaml

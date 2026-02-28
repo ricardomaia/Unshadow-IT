@@ -1,0 +1,117 @@
+id: seo-cloaking-detection
+
+info:
+  name: Detect SEO Cloaking
+  author: ricardomaia
+  severity: info
+  description: |
+    Detecta se o site utiliza técnicas de cloaking, entregando conteúdo diferente para o Googlebot
+    ou dispositivos móveis em comparação a um navegador desktop comum.
+  tags: seo, cloaking, detection, mobile
+  reference:
+    - https://www.semrush.com/blog/what-is-seo-cloaking/
+    - https://www.searchenginejournal.com/what-is-cloaking/451679/
+
+http:
+  - raw:
+      - |
+        GET {{Path}} HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+        Connection: close
+
+      - |
+        GET {{Path}} HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+        Connection: close
+
+      - |
+        GET {{Path}} HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+        Connection: close
+
+      - |
+        GET {{Path}} HTTP/1.1
+        Host: {{Hostname}}
+        User-Agent: Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+        Connection: close
+
+    # Avalia matchers/extractors apenas após todos os requests completarem
+    req-condition: true
+
+    # Extraímos os títulos de cada resposta para comparação
+    extractors:
+      - type: regex
+        name: title_normal
+        internal: true
+        part: body_1
+        group: 1
+        regex:
+          - "(?i)<title>(.*?)</title>"
+
+      - type: regex
+        name: title_bot
+        internal: true
+        part: body_2
+        group: 1
+        regex:
+          - "(?i)<title>(.*?)</title>"
+
+      - type: regex
+        name: title_iphone
+        internal: true
+        part: body_3
+        group: 1
+        regex:
+          - "(?i)<title>(.*?)</title>"
+
+      - type: regex
+        name: title_android
+        internal: true
+        part: body_4
+        group: 1
+        regex:
+          - "(?i)<title>(.*?)</title>"
+
+      # Extractors visíveis — exibidos no output ao detectar cloaking
+      - type: dsl
+        name: cloaking_titles
+        dsl:
+          - "\"[Desktop] \" + title_normal + \" | [Crawler] \" + title_bot + \" | [iPhone] \" + title_iphone + \" | [Android] \" + title_android"
+
+      - type: dsl
+        name: cloaking_body_sizes
+        dsl:
+          - "\"[Desktop] \" + to_string(len(body_1)) + \"B | [Crawler] \" + to_string(len(body_2)) + \"B | [iPhone] \" + to_string(len(body_3)) + \"B | [Android] \" + to_string(len(body_4)) + \"B\""
+
+      - type: dsl
+        name: spam_keywords_found
+        dsl:
+          - "'Keywords: ' + (contains(body_2+body_3+body_4,'casino')?'casino ':'') + (contains(body_2+body_3+body_4,'betting')?'betting ':'') + (contains(body_2+body_3+body_4,'viagra')?'viagra ':'') + (contains(body_2+body_3+body_4,'poker')?'poker ':'') + (contains(body_2+body_3+body_4,'slots')?'slots ':'') + (contains(body_2+body_3+body_4,'pharma')?'pharma ':'') + (contains(body_2+body_3+body_4,'loan')?'loan ':'') + (contains(body_2+body_3+body_4,'payday')?'payday ':'')"
+
+    matchers-condition: or
+    matchers:
+      # Guard: status_code_4 > 0 garante que o matcher só dispara após o 4º request,
+      # evitando matches duplicados que ocorrem nas avaliações intermediárias (req 2 e 3).
+      - type: dsl
+        name: title_mismatch
+        dsl:
+          - "status_code_4 > 0 && (title_normal != title_bot || title_normal != title_iphone || title_normal != title_android)"
+
+      - type: dsl
+        name: body_size_mismatch
+        dsl:
+          - "status_code_4 > 0 && ((len(body_2) - len(body_1) > 1000) || (len(body_1) - len(body_2) > 1000) || (len(body_3) - len(body_1) > 1000) || (len(body_1) - len(body_3) > 1000) || (len(body_4) - len(body_1) > 1000) || (len(body_1) - len(body_4) > 1000))"
+
+      # Palavras-chave suspeitas em respostas de Bot ou Mobile
+      # word matcher não suporta múltiplos body_N — usa-se DSL com contains()
+      - type: dsl
+        name: spam_keywords
+        dsl:
+          - "status_code_4 > 0 && contains_any(body_2 + body_3 + body_4, 'casino', 'betting', 'viagra', 'poker', 'slots')"

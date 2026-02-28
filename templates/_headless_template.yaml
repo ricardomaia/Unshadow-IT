@@ -1,0 +1,64 @@
+id: headless_template
+
+info:
+  name: Headless Template HTML
+  description: Headless Template description comes here.
+  author: ricardomaia
+  severity: info
+
+headless:
+  - steps:
+      - action: debug # Only in development
+      - action: setheader
+        args:
+          part: response
+          key: Content-Security-Policy
+          value: "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;"
+      - args:
+          url: "{{BaseURL}}/headless.php"
+        action: navigate
+      - action: waitload
+      - args:
+          by: x
+          xpath: /html/body/section/div/button
+        action: click
+      - action: sleep
+        args:
+          duration: 2
+      - action: script
+        name: properties
+        args:
+          hook: true
+          code: |
+            () => {
+               properties_array = [];
+               properties_array.push(location.href);
+               properties_array.push(document.cookie);
+               return properties_array;
+             };
+      - action: script
+        name: extract
+        args:
+          code: |
+            () => {
+              return document.getElementById('txt_height').value;
+            }
+      - action: sleep
+        args:
+          duration: 2
+
+    matchers:
+      - part: extract
+        type: regex
+        regex:
+          - "(.*)"
+
+    extractors:
+      - part: extract
+        type: regex
+        regex:
+          - "(.*)"
+      - type: kval
+        part: properties
+        kval:
+          - properties

@@ -1,0 +1,41 @@
+id: base_template_comparison
+
+info:
+  name: Version Comparison
+  author: ricardomaia
+  severity: info
+
+http:
+  - raw:
+      - |
+        GET / HTTP/1.1
+        Host: {{Hostname}}
+
+      - |
+        @Host: nuclei-target.local:1337
+        GET /changelog.md HTTP/1.1
+        Host: nuclei-target.local:1337
+
+    extractors:
+      - type: regex
+        part: body_1
+        name: internal_detected_version
+        internal: false
+        group: 1
+        regex:
+          - '(?i)version.((\d+\.)?(\d+\.)?(\*|\d+))'
+
+      - type: regex
+        part: body_2
+        name: internal_last_version
+        internal: false
+        group: 1
+        regex:
+          - '##\s((\d\.?)+)'
+
+    req-condition: true
+    #matchers:
+    #  - type: dsl
+    #    name: outdated
+    #    dsl:
+    #      - compare_versions(internal_detected_version, concat("< ", internal_last_version))

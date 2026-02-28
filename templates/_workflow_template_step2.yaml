@@ -1,0 +1,20 @@
+id: workflow-template-step2
+
+info:
+  name: value-sharing-template1
+  author: ricardomaia
+  severity: info
+
+http:
+  - raw:
+      - |
+        GET /workflow-step2.php?flag={{flag}} HTTP/1.1
+        Host: {{Hostname}}
+    redirects: true
+    extractors:
+      - type: regex
+        part: body
+        name: description
+        regex:
+          - '(?i)flag:\W.*<pre>\W(.*)</pre>'
+        group: 1

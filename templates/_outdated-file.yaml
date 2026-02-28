@@ -1,0 +1,40 @@
+id: base_template_comparison
+
+info:
+  name: Version Comparison
+  author: ricardomaia
+  severity: info
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+
+    payloads:
+      last_version: _outdated-file.txt
+
+    extractors:
+      - type: regex
+        part: body
+        internal: true
+        name: internal_detected_version
+        group: 1
+        regex:
+          - '(?i)version.((\d+\.)?(\d+\.)?(\*|\d+))'
+
+      - type: regex
+        part: body
+        name: detected_version
+        group: 1
+        regex:
+          - '(?i)version.((\d+\.)?(\d+\.)?(\*|\d+))'
+
+    matchers-condition: or
+    matchers:
+      - type: dsl
+        name: "outdated_version"
+        dsl:
+          - compare_versions(internal_detected_version, concat("< ", last_version))
+      - type: status
+        status:
+          - 200
